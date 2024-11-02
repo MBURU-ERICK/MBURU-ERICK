@@ -1,0 +1,735 @@
+hospital_management_system/
+│
+├── frontend/
+│   ├── index.html
+│   ├── styles.css
+│   └── script.js
+│
+├── backend/
+│   ├── app.py
+│   └── requirements.txt
+│
+└── README.md
+INDEX .HTML
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hospital Management System</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>Hospital Management System</h1>
+    </header>
+    <main>
+        <section>
+            <h2>Patient Registration</h2>
+            <form id="registrationForm">
+                <label for="name">Name:</label>
+                <input type="text" id="name" required>
+                
+                <label for="age">Age:</label>
+                <input type="number" id="age" required>
+                
+                <label for="gender">Gender:</label>
+                <select id="gender">
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                </select>
+                
+                <button type="submit">Register</button>
+            </form>
+        </section>
+    </main>
+    <script src="script.js"></script>
+</body>
+</html>
+
+STYLE. CSS
+
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
+}
+
+header {
+    background: #35424a;
+    color: #ffffff;
+    padding: 10px 0;
+    text-align: center;
+}
+
+main {
+    padding: 20px;
+}
+
+form {
+    background: #ffffff;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+label {
+    display: block;
+    margin: 10px 0 5px;
+}
+
+input, select {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+app.py
+
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
+
+# In-memory database (for demonstration purposes)
+patients = []
+
+@app.route('/register', methods=['POST'])
+def register_patient():
+    data = request.json
+    patients.append(data)
+    return jsonify({"message": "Patient registered successfully", "patient": data}), 201
+
+@app.route('/patients', methods=['GET'])
+def get_patients():
+    return jsonify(patients), 200
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+JAVASCRIPT 
+
+document.getElementById('registrationForm').addEventListener('submit', function(event) {
+    event.preventDefault();
+
+    const name = document.getElementById('name').value;
+    const age = document.getElementById('age').value;
+    const gender = document.getElementById('gender').value;
+
+    fetch('/register', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ name, age, gender })
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert(data.message);
+        document.getElementById('registrationForm').reset();
+    })
+    .catch(error => console.error('Error:', error));
+});
+
+hospital_management_system/
+│
+├── frontend/
+│   ├── index.html
+│   ├── styles.css
+│   ├── script.js
+│   └── appointment.html
+│
+├── backend/
+│   ├── app.py
+│   ├── models.py
+│   ├── forms.py
+│   ├── database.db
+│   └── requirements.txt
+│
+└── README.md
+models.py
+
+from flask_sqlalchemy import SQLAlchemy
+
+db = SQLAlchemy()
+
+class Patient(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    age = db.Column(db.Integer, nullable=False)
+    gender = db.Column(db.String(10), nullable=False)
+
+class Appointment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    patient_id = db.Column(db.Integer, db.ForeignKey('patient.id'), nullable=False)
+    date = db.Column(db.String(50), nullable=False)
+    time = db.Column(db.String(50), nullable=False)
+    patient = db.relationship('Patient', backref='appointments')
+
+app.py
+
+from flask import Flask, request, jsonify
+from models import db, Patient, Appointment
+from datetime import datetime
+
+app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db.init_app(app)
+
+with app.app_context():
+    db.create_all()
+
+@app.route('/register', methods=['POST'])
+def register_patient():
+    data = request.json
+    new_patient = Patient(name=data['name'], age=data['age'], gender=data['gender'])
+    db.session.add(new_patient)
+    db.session.commit()
+    return jsonify({"message": "Patient registered successfully", "patient": data}), 201
+
+@app.route('/patients', methods=['GET'])
+def get_patients():
+    patients = Patient.query.all()
+    return jsonify([{'id': p.id, 'name': p.name, 'age': p.age, 'gender': p.gender} for p in patients]), 200
+
+@app.route('/appointments', methods=['POST'])
+def schedule_appointment():
+    data = request.json
+    new_appointment = Appointment(patient_id=data['patient_id'], date=data['date'], time=data['time'])
+    db.session.add(new_appointment)
+    db.session.commit()
+    return jsonify({"message": "Appointment scheduled successfully"}), 201
+
+if __name__ == '__main__':
+    app.run(debug=True)
+ 
+APPOINTMENT .HTML
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schedule Appointment</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>Schedule Appointment</h1>
+    </header>
+    <main>
+        <form id="appointmentForm">
+            <label for="patientId">Patient ID:</label>
+            <input type="number" id="patientId" required>
+            
+            <label for="date">Date:</label>
+            <input type="date" id="date" required>
+            
+            <label for="time">Time:</label>
+            <input type="time" id="time" required>
+            
+            <button type="submit">Schedule</button>
+        </form>
+    </main>
+    <script>
+        document.getElementById('appointmentForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            const patientId = document.getElementById('patientId').value;
+            const date = document.getElementById('date').value;
+            const time = document.getElementById('time').value;
+
+            fetch('/appointments', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ patient_id: patientId, date, time })
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message);
+                document.getElementById('appointmentForm').reset();
+            })
+            .catch(error => console.error('Error:', error));
+        });
+    </script>
+</body>
+</html>
+
+Virtual Environment 
+
+python -m venv venv
+source venv/bin/activate  # On Windows use `venv\Scripts\activate`
+
+requirements 
+
+Flask==2.2.2
+Flask-SQLAlchemy==2.5.1
+Flask-Login==0.6.0
+
+models py
+
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import UserMixin
+
+db = SQLAlchemy()
+
+class User(db.Model, UserMixin):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(100), unique=True, nullable=False)
+    password = db.Column(db.String(200), nullable=False)
+    role = db.Column(db.String(50), nullable=False)  # e.g., 'admin', 'doctor', 'nurse'
+
+class Patient(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    age = db.Column(db.Integer, nullable=False)
+    gender = db.Column(db.String(10), nullable=False)
+    medical_history = db.Column(db.Text)  # Add a field for medical history
+
+app.py
+
+from flask import Flask, request, jsonify
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from models import db, User, Patient
+
+app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+app.config['SECRET_KEY'] = 'your_secret_key'
+db.init_app(app)
+
+login_manager = LoginManager()
+login_manager.init_app(app)
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.json
+    user = User.query.filter_by(username=data['username']).first()
+    if user and user.password == data['password']:  # Use hashed passwords in production
+        login_user(user)
+        return jsonify({"message": "Login successful"}), 200
+    return jsonify({"message": "Invalid credentials"}), 401
+
+@app.route('/logout', methods=['POST'])
+@login_required
+def logout():
+    logout_user()
+    return jsonify({"message": "Logged out successfully"}), 200
+
+@app.route('/profile', methods=['GET'])
+@login_required
+def profile():
+    return jsonify({"username": current_user.username, "role": current_user.role}), 200
+
+app.py
+
+@app.route('/patients/<int:patient_id>/history', methods=['POST'])
+@login_required
+def add_medical_history(patient_id):
+    data = request.json
+    patient = Patient.query.get_or_404(patient_id)
+    patient.medical_history = data['history']
+    db.session.commit()
+    return jsonify({"message": "Medical history updated successfully"}), 200
+
+@app.route('/patients/<int:patient_id>/history', methods=['GET'])
+@login_required
+def get_medical_history(patient_id):
+    patient = Patient.query.get_or_404(patient_id)
+    return jsonify({"medical_history": patient.medical_history}), 200
+
+model.py
+
+class Bill(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    patient_id = db.Column(db.Integer, db.ForeignKey('patient.id'), nullable=False)
+    amount = db.Column(db.Float, nullable=False)
+    status = db.Column(db.String(50), default='unpaid')  # e.g., 'paid', 'unpaid'
+    patient = db.relationship('Patient', backref='bills')
+
+app.py
+
+@app.route('/bills', methods=['POST'])
+@login_required
+def create_bill():
+    data = request.json
+    new_bill = Bill(patient_id=data['patient_id'], amount=data['amount'])
+    db.session.add(new_bill)
+    db.session.commit()
+    return jsonify({"message": "Bill created successfully"}), 201
+
+@app.route('/bills/<int:bill_id>', methods=['GET'])
+@login_required
+def get_bill(bill_id):
+    bill = Bill.query.get_or_404(bill_id)
+    return jsonify({"amount": bill.amount, "status": bill.status}), 200
+
+
+<div class="container">
+    <h2>Patients List</h2>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Age</th>
+                <th>Gender</th>
+            </tr>
+        </thead>
+        <tbody id="patientTableBody">
+            <!-- Patient data will be populated here -->
+        </tbody>
+    </table>
+</div>
+
+fetch('/patients')
+    .then(response => response.json())
+    .then(data => {
+        const tableBody = document.getElementById('patientTableBody');
+        data.forEach(patient => {
+            const row = `<tr>
+                <td>${patient.id}</td>
+                <td>${patient.name}</td>
+                <td>${patient.age}</td>
+                <td>${patient.gender}</td>
+            </tr>`;
+            tableBody.innerHTML += row;
+        });
+    });
+
+
+@app.route('/consultations', methods=['POST'])
+@login_required
+def schedule_consultation():
+    data = request.json
+    # Logic to integrate with a video service API (e.g., Twilio)
+    # Save consultation details in the database
+    return jsonify({"message": "Consultation scheduled successfully"}), 201
+
+class Feedback(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    patient_id = db.Column(db.Integer, db.ForeignKey('patient.id'), nullable=False)
+    rating = db.Column(db.Integer, nullable=False)
+    comments = db.Column(db.Text)
+    patient = db.relationship('Patient', backref='feedbacks')
+
+
+@app.route('/feedback', methods=['POST'])
+@login_required
+def submit_feedback():
+    data = request.json
+    new_feedback = Feedback(patient_id=data['patient_id'], rating=data['rating'], comments=data.get('comments'))
+    db.session.add(new_feedback)
+    db.session.commit()
+    return jsonify({"message": "Feedback submitted successfully"}), 201
+
+@app.route('/patients/<int:patient_id>/feedback', methods=['GET'])
+@login_required
+def get_feedback(patient_id):
+    feedbacks = Feedback.query.filter_by(patient_id=patient_id).all()
+    return jsonify([{'rating': f.rating, 'comments': f.comments} for f in feedbacks]), 200
+
+
+feedback 
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Feedback</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>Submit Feedback</h1>
+    </header>
+    <main>
+        <form id="feedbackForm">
+            <label for="patientId">Patient ID:</label>
+            <input type="number" id="patientId" required>
+            
+            <label for="rating">Rating (1-5):</label>
+            <input type="number" id="rating" min="1" max="5" required>
+            
+            <label for="comments">Comments:</label>
+            <textarea id="comments"></textarea>
+            
+            <button type="submit">Submit Feedback</button>
+        </form>
+    </main>
+    <script>
+        document.getElementById('feedbackForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            const patientId = document.getElementById('patientId').value;
+            const rating = document.getElementById('rating').value;
+            const comments = document.getElementById('comments').value;
+
+            fetch('/feedback', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ patient_id: patientId, rating, comments })
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message);
+                document.getElementById('feedbackForm').reset();
+            })
+            .catch(error => console.error('Error:', error));
+        });
+    </script>
+</body>
+</html>
+
+
+FROM python:3.9
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+COPY . .
+
+CMD ["flask", "run", "--host=0.0.0.0"]
+
+patient.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Portal</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>Welcome to Your Patient Portal</h1>
+    </header>
+    <main>
+        <section>
+            <h2>Your Appointments</h2>
+            <table id="appointmentsTable">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>Doctor</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Appointments will be populated here -->
+                </tbody>
+            </table>
+        </section>
+    </main>
+    <script>
+        fetch('/patients/appointments')
+            .then(response => response.json())
+            .then(data => {
+                const tableBody = document.querySelector('#appointmentsTable tbody');
+                data.forEach(appointment => {
+                    const row = `<tr>
+                        <td>${appointment.date}</td>
+                        <td>${appointment.time}</td>
+                        <td>${appointment.doctor}</td>
+                        <td>${appointment.status}</td>
+                    </tr>`;
+                    tableBody.innerHTML += row;
+                });
+            });
+    </script>
+</body>
+</html>
+
+app.py
+
+@app.route('/patients/appointments', methods=['GET'])
+@login_required
+def get_patient_appointments():
+    appointments = Appointment.query.filter_by(patient_id=current_user.id).all()
+    return jsonify([{
+        'date': a.date,
+        'time': a.time,
+        'doctor': a.doctor.name,  # Assuming you have a relationship with Doctor
+        'status': a.status
+    } for a in appointments]), 200
+
+doctors html
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doctor Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>Your Dashboard</h1>
+    </header>
+    <main>
+        <section>
+            <h2>Your Schedule</h2>
+            <table id="scheduleTable">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>Patient</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Schedule will be populated here -->
+                </tbody>
+            </table>
+        </section>
+    </main>
+    <script>
+        fetch('/doctors/schedule')
+            .then(response => response.json())
+            .then(data => {
+                const tableBody = document.querySelector('#scheduleTable tbody');
+                data.forEach(appointment => {
+                    const row = `<tr>
+                        <td>${appointment.date}</td>
+                        <td>${appointment.time}</td>
+                        <td>${appointment.patient}</td>
+                    </tr>`;
+                    tableBody.innerHTML += row;
+                });
+            });
+    </script>
+</body>
+</html>
+
+app.py
+
+@app.route('/doctors/schedule', methods=['GET'])
+@login_required
+def get_doctor_schedule():
+    appointments = Appointment.query.filter_by(doctor_id=current_user.id).all()
+    return jsonify([{
+        'date': a.date,
+        'time': a.time,
+        'patient': a.patient.name  # Assuming you have a relationship with Patient
+    } for a in appointments]), 200
+
+
+twilio
+from twilio.rest import Client
+
+@app.route('/send_sms', methods=['POST'])
+@login_required
+def send_sms():
+    data = request.json
+    client = Client('TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN')
+    
+    message = client.messages.create(
+        body=data['message'],
+        from_='YOUR_TWILIO_PHONE_NUMBER',
+        to=data['to']
+    )
+    
+    return jsonify({"message": "SMS sent successfully", "sid": message.sid}), 200
+
+data encryption 
+
+from cryptography.fernet import Fernet
+
+# Generate a key (do this once and store it securely)
+key = Fernet.generate_key()
+cipher_suite = Fernet(key)
+
+# Encrypting data
+encrypted_data = cipher_suite.encrypt(b"Sensitive Data")
+
+# Decrypting data
+decrypted_data = cipher_suite.decrypt(encrypted_data)
+
+
+generate reports
+
+import pandas as pd
+
+@app.route('/reports/patient_statistics', methods=['GET'])
+@login_required
+def patient_statistics():
+    patients = Patient.query.all()
+    df = pd.DataFrame([{'name': p.name, 'age': p.age, 'gender': p.gender} for p in patients])
+    
+    # Example: Calculate average age
+    average_age = df['age'].mean()
+    
+    return jsonify({"average_age": average_age}), 200
+
+
+compose.yml
+
+version: '3'
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+
+  db:
+    image: postgres
+    environment:
+      POSTGRES_DB: hospital_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+
+export FLASK_ENV=production
+export DATABASE_URL=postgresql://user:password@db/hospital_db
+
+security 
+
+from flask_security import Security, SQLAlchemyUserDatastore
+
+user_datastore = SQLAlchemyUserDatastore(db, User, Role)
+security = Security(app, user_datastore)
+
+@app.route('/login', methods=['POST'])
+def login():
+    # Implement login logic with MFA
+    pass
+
+
+app.py
+@app.route('/register', methods=['POST'])
+def register():
+    data = request.json
+    new_patient = Patient(name=data['name'], email=data['email'], password=hash_password(data['password']))
+    db.session.add(new_patient)
+    db.session.commit()
+    
+    # Send verification email
+    send_verification_email(new_patient.email)
+    
+    return jsonify({"message": "Registration successful! Please verify your email."}), 201
+
+
+class ChronicDisease(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    patient_id = db.Column(db.Integer, db.ForeignKey('patient.id'), nullable=False)
+    disease_name = db.Column(db.String(100), nullable=False)
+    symptoms = db.Column(db.Text)
+    treatment_plan = db.Column(db.Text)
+    patient = db.relationship('Patient', backref='chronic_diseases')
